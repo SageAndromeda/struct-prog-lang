@@ -54,8 +54,14 @@ def tokenize(characters):
 
 def test_simple_tokens():
     print("testing simple tokens")
-    assert tokenize("+") == [{"tag": "+", "value": "+", "position": 0}]
-    assert tokenize("-") == [{"tag": "-", "value": "-", "position": 0}]
+    assert tokenize("+") == [
+        {"tag": "+", "value": "+", "position": 0},
+        {"tag": None, "value": None, "position": 1},
+    ]
+    assert tokenize("-") == [
+        {"tag": "-", "value": "-", "position": 0},
+        {"tag": None, "value": None, "position": 1},
+    ]
     i = 0
     for characters in ["+", "-"]:
         tokens = tokenize(characters)
@@ -74,6 +80,4 @@ def test_simple_tokens():
 
 if __name__ == "__main__":  # Idiom in Python saying this is the main program
     test_simple_tokens()
-    # tokens = tokenize("123.45")
-    # print(tokens)
     print("Done.")
