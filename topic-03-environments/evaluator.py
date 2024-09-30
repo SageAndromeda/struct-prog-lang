@@ -1,16 +1,20 @@
 from tokenizer import tokenize
 from parser import parse
 
+
 def evaluate(ast, environment):
     if ast["tag"] == "number":
-        assert type(ast["value"]) in [float, int],f"unexpected numerical type {type(ast["value"])}"
+        assert type(ast["value"]) in [
+            float,
+            int,
+        ], f"unexpected numerical type {type(ast["value"])}"
         return ast["value"], False
     if ast["tag"] == "identifier":
-        #assert type(ast["value"]) in [
-        #    float,
-        #    int,
-        #], f"unexpected numerical type {type(ast["value"])}"
-        return 3.14159, False
+        # print(ast)
+        identifier = ast["value"]
+        assert identifier in environment, f"Unknown identifier: '{identifier}'."
+        if identifier in environment:
+            return environment[identifier], False
     if ast["tag"] == "+":
         left_value, _ = evaluate(ast["left"], environment)
         right_value, _ = evaluate(ast["right"], environment)
@@ -73,11 +77,22 @@ def evaluate(ast, environment):
         else:
             print()
         return None, False
+    if ast["tag"] == "=":
+        assert 'target' in ast
+        target = ast['target']
+        assert  target['tag'] == 'identifier'
+        identifier = target['value']
+        value, _ = evaluate(ast["value"], environment)
+        environment[identifier] = value
+        return None, False
     assert False, "Unknown operator in AST"
+
 
 def equals(code, environment, expected_result, expected_environment=None):
     result, _ = evaluate(parse(tokenize(code)), environment)
-    assert (result == expected_result), f"""ERROR: When executing
+    assert (
+        result == expected_result
+    ), f"""ERROR: When executing
     {[code]} 
     -- expected result -- 
     {[expected_result]}
@@ -93,44 +108,65 @@ def equals(code, environment, expected_result, expected_environment=None):
         -- got --
         {[environment]}."""
 
+
 def test_evaluate_single_value():
-    print("test evaluate single value")
-    equals("4",{},4,{})
-    equals("3",{},3,{})
-    equals("4.2",{},4.2,{})
-    equals("X", {}, 3.14159, {})
+    print("testing evaluate single value")
+    equals("4", {}, 4, {})
+    equals("3", {}, 3, {})
+    equals("4.2", {}, 4.2, {})
+    equals("X", {"X": 1}, 1)
+    equals("Y", {"X": 1, "Y": 2}, 2)
+
 
 def test_evaluate_addition():
-    print("test evaluate addition")
-    equals("1+1",{},2,{})
-    equals("1+2+3",{},6,{})
-    equals("1.2+2.3+3.4",{},6.9,{})
+    print("testing evaluate addition")
+    equals("1+1", {}, 2, {})
+    equals("1+2+3", {}, 6, {})
+    equals("1.2+2.3+3.4", {}, 6.9, {})
+    equals("X+Y", {"X": 1, "Y": 2}, 3)
+
+
 
 def test_evaluate_subtraction():
-    print("test evaluate subtraction")
-    equals("1-1",{},0,{})
-    equals("3-2-1",{},0,{})
+    print("testing evaluate subtraction")
+    equals("1-1", {}, 0, {})
+    equals("3-2-1", {}, 0, {})
+
 
 def test_evaluate_multiplication():
-    print("test evaluate multiplication")
-    equals("1*1",{},1,{})
-    equals("3*2*2",{},12,{})
-    equals("3+2*2",{},7,{})
-    equals("(3+2)*2",{},10,{})
+    print("testing evaluate multiplication")
+    equals("1*1", {}, 1, {})
+    equals("3*2*2", {}, 12, {})
+    equals("3+2*2", {}, 7, {})
+    equals("(3+2)*2", {}, 10, {})
+
 
 def test_evaluate_division():
-    print("test evaluate division")
-    equals("4/2",{},2,{})
-    equals("8/4/2",{},1,{})
+    print("testing evaluate division")
+    equals("4/2", {}, 2, {})
+    equals("8/4/2", {}, 1, {})
+
 
 def test_evaluate_negation():
-    print("test evaluate negation")
-    equals("-2",{},-2,{})
-    equals("--3",{},3,{})
+    print("testing evaluate negation")
+    equals("-2", {}, -2, {})
+    equals("--3", {}, 3, {})
+
+
+def test_assignment():
+    print("testing assignment")
+    equals("X=1",{},None,{"X":1})
+
+
+def test_assignment_statement():
+    print("testing assignment statement")
+    equals("X=1",{},None,{"X":1})
+    equals("x=x+1",{"x":1},None,{"x":2}) # '=' must be close to beginning of evaluation statement
+                                         # otherwise it would try doing 1+None
 
 
 def test_print_statement():
-    print("test print statement")
+    print("testing print statement")
     equals("print(77)", {}, None, {})
     equals("print()", {}, None, {})
     equals("print(50+7)", {}, None, {})
@@ -145,4 +181,6 @@ if __name__ == "__main__":
     test_evaluate_division()
     test_evaluate_negation()
     test_print_statement()
+    test_assignment()
+    test_assignment_statement()
     print("done.")
