@@ -88,9 +88,9 @@ def evaluate(ast, environment):
     if ast["tag"] == "list":
         while ast:
             assert "statement" in ast
-            value, _ = evaluate(ast["statement"], environment)
+            value, return_chain = evaluate(ast["statement"], environment)
             ast = ast["list"]
-        return None, False
+        return value, return_chain
     assert False, "Unknown operator in AST"
 
 

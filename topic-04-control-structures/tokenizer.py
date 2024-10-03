@@ -17,7 +17,7 @@ patterns = [
     ["!=", "!="],
     ["<=", "<="],
     [">=", ">="],
-    ["<", "<"], # < and > have to go later cuz they're a substring of others
+    ["<", "<"],
     [">", ">"],
     ["=", "="],
     [";", ";"],
@@ -29,11 +29,13 @@ patterns = [
     ["function", "function"],
     ["return", "return"],
     ["(\\d+\\.\\d*)|(\\d*\\.\\d+)|(\\d+)", "number"],
-    ["[A-Za-z_][A-Za-z0-9_]*","identifier"],
+    ["[A-Za-z_][A-Za-z0-9_]*", "identifier"],
     ["\\&\\&", "&&"],
     ["\\|\\|", "||"],
+    ["\\{", "{"],
+    ["\\}", "}"],
     ["!", "!"],
-    ["[ \t\n]+"],
+    ["[ \t\n]+", "whitespace"],
 ]
 
 for pattern in patterns:
@@ -49,12 +51,13 @@ def tokenize(characters):
             if match:
                 break
         assert match, f"Did not find a match for {characters[position:]}"
-        token = {
-            "tag": tag,
-            "value": match.group(0),
-            "position": position,
-        }
-        tokens.append(token)
+        if tag != 'whitespace':
+            token = {
+                "tag": tag,
+                "value": match.group(0),
+                "position": position,
+            }
+            tokens.append(token)
         position = match.end()
     for token in tokens:
         if token["tag"] == "number":
@@ -81,11 +84,11 @@ def test_simple_tokens():
         assert tokens[0]["tag"] == char
         assert tokens[0]["value"] == char
         assert tokens[0]["position"] == i
-    for characters in ["(",")","+", "-", "*", "/", "==","!=","<",">","<=", ">=","=","||","&&","!","print"]:
+    for characters in ["(",")","+", "-", "*", "/", "==","!=","<",">","<=", ">=","=","||","&&","!","print","{","}"]:
         tokens = tokenize(characters)
         assert (
             tokens[0]["tag"] == characters
-        ), f"Expecting {characters}, got {tokens[0]["tag"]}"
+        ), f"Expecting {[characters]}, got {[tokens[0]["tag"]]}"
         assert tokens[0]["value"] == characters
     for number in ["123.45", "1.", ".1", "123"]:
         tokens = tokenize(number)
@@ -99,8 +102,19 @@ def test_identifier_tokens():
         assert tokens[0]["tag"] == "identifier"
         assert tokens[0]["value"] == s
 
+def test_whitespace():
+    print("testing whitespace")
+    for s in [" ", "\t", "\n"]:
+        tokens = tokenize(s)
+        assert tokens == [{"tag": None, "value": None, "position": 1}]
+    t1 = tokenize("1 + 2 / 3\t-4\n*5")
+    t2 = tokenize("1+2/3-4*5")
+    t1 = [{"tag":i["tag"], "value":i["value"]} for i in t1]
+    t2 = [{"tag":i["tag"], "value":i["value"]} for i in t2]
+    assert t1==t2
 
 if __name__ == "__main__":
     test_simple_tokens()
     test_identifier_tokens()
+    test_whitespace()
     print("done.")
