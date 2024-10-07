@@ -561,6 +561,99 @@ def test_parse_print_statement():
     }
 
 
+def parse_if_statement(tokens):
+    """
+    if_statement = "if" "(" boolean_expression ")" { "else" statement }
+    """
+    assert tokens[0]["tag"] == "if"
+    tokens = tokens[1:]
+    assert tokens[0]["tag"] == "("
+    tokens = tokens[1:]
+    condition, tokens = parse_expression(tokens)
+    assert tokens[0]["tag"] == ")"
+    tokens = tokens[1:]
+    then_statement, tokens = parse_statement(tokens)
+    node = {"tag": "if", "condition": condition, "then": then_statement}
+    if tokens[0]["tag"] == "else":
+        tokens = tokens[1:]
+        else_statement, tokens = parse_statement(tokens)
+        node["else"] = else_statement
+    return node, tokens
+
+
+def test_parse_if_statement():
+    """
+    if_statement = "if" "(" boolean_expression ")" statement { "else" statement }
+    """
+    print("testing parse_if_statement")
+    ast, tokens = parse_if_statement(tokenize("if(1)print(2)"))
+    print(ast)
+    assert ast == {
+        "tag": "if",
+        "condition": {"tag": "number", "value": 1, "position": 3},
+        "then": {
+            "tag": "print",
+            "value": {"tag": "number", "value": 2, "position": 11},
+        },
+    }
+    ast, tokens = parse_if_statement(tokenize("if(1)print(2)elseprint(3)"))
+    assert ast == {
+        "tag": "if",
+        "condition": {"tag": "number", "value": 1, "position": 3},
+        "then": {
+            "tag": "print",
+            "value": {"tag": "number", "value": 2, "position": 11},
+        },
+        "else": {
+            "tag": "print",
+            "value": {"tag": "number", "value": 3, "position": 23},
+        },
+    }
+    ast, tokens = parse_if_statement(
+        tokenize("if(1){print(2);print(-2)}else{print(3);print(-3)}")
+    )
+    assert ast == {
+        "tag": "if",
+        "condition": {"tag": "number", "value": 1, "position": 3},
+        "then": {
+            "tag": "list",
+            "statement": {
+                "tag": "print",
+                "value": {"tag": "number", "value": 2, "position": 12},
+            },
+            "list": {
+                "tag": "list",
+                "statement": {
+                    "tag": "print",
+                    "value": {
+                        "tag": "negate",
+                        "value": {"tag": "number", "value": 2, "position": 22},
+                    },
+                },
+                "list": None,
+            },
+        },
+        "else": {
+            "tag": "list",
+            "statement": {
+                "tag": "print",
+                "value": {"tag": "number", "value": 3, "position": 36},
+            },
+            "list": {
+                "tag": "list",
+                "statement": {
+                    "tag": "print",
+                    "value": {
+                        "tag": "negate",
+                        "value": {"tag": "number", "value": 3, "position": 46},
+                    },
+                },
+                "list": None,
+            },
+        },
+    }
+
+
 def parse_assignment_statement(tokens):
     """
     assignment_statement = expression
@@ -595,11 +688,15 @@ def parse_statement(tokens):
     """
     statement = print_statement |
                 if_statement |
-                "{" statement_list "}"
+                "{" statement_list "}" # Block Statement
                 assignment_statement
     """
     if tokens[0]["tag"] == "print":
         return parse_print_statement(tokens)
+    if tokens[0]["tag"] == "if":
+        return parse_if_statement(tokens)
+    # if tokens[0]["tag"] == "while":
+    #     return parse_while_statement(tokens)
     if tokens[0]["tag"] == "{":
         ast, tokens = parse_statement_list(tokens[1:])
         assert tokens[0]["tag"] == "}"
@@ -738,6 +835,8 @@ if __name__ == "__main__":
     test_parse_boolean_expression()
     test_parse_expression()
     test_parse_print_statement()
+    test_parse_if_statement()
+    # test_parse_while_statement()
     test_parse_assignment_statement()
     test_parse_statement()
     test_parse_statement_list()
