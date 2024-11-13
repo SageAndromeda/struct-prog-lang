@@ -109,13 +109,13 @@ def test_simple_tokens():
         "&&",
         "!",
         "print",
-        "{",
-        "}",
         "if",
         "else",
         "while",
         "break",
         "continue",
+        "{",
+        "}",
     ]:
         tokens = tokenize(characters)
         assert (
