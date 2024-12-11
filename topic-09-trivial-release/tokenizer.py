@@ -28,6 +28,7 @@ patterns = [
     [r"\-", "-"],
     [r"\*", "*"],
     [r"\/", "/"],
+    [r"%", "%"],
     [r"\(", "("],
     [r"\)", ")"],
     [r"\{", "{"],
@@ -104,7 +105,7 @@ def tokenize(characters, generated_tags=test_generated_tags):
 
 def test_simple_tokens():
     print("testing simple tokens...")
-    examples = ".,[,],+,-,*,/,(,),{,},;,:,!,&&,||,<,>,<=,>=,==,!=,=".split(",")
+    examples = ".,[,],+,-,*,/,%,(,),{,},;,:,!,&&,||,<,>,<=,>=,==,!=,=".split(",")
     examples.append(",")
     for example in examples:
         t = tokenize(example)[0]
