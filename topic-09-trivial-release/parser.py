@@ -14,7 +14,7 @@ grammar = """
     complex_expression = simple_expression { ("[" expression "]") | ("." identifier) | "(" [ expression { "," expression } ] ")" } ;
 
     arithmetic_factor = complex_expression ;
-    arithmetic_term = arithmetic_factor { ("*" | "/") arithmetic_factor } ;
+    arithmetic_term = arithmetic_factor { ("*" | "/" | "%") arithmetic_factor } ;
     arithmetic_expression = arithmetic_term { ("+" | "-") arithmetic_term } ;
     relational_expression = arithmetic_expression { ("<" | ">" | "<=" | ">=" | "==" | "!=") arithmetic_expression } ;
     logical_factor = relational_expression ;
@@ -500,10 +500,10 @@ def test_parse_arithmetic_factor():
 
 def parse_arithmetic_term(tokens):
     """
-    arithmetic_term = arithmetic_factor { ("*" | "/") arithmetic_factor } ;
+    arithmetic_term = arithmetic_factor { ("*" | "/" | "%") arithmetic_factor } ;
     """
     node, tokens = parse_arithmetic_factor(tokens)
-    while tokens[0]["tag"] in ["*", "/"]:
+    while tokens[0]["tag"] in ["*", "/", "%"]:
         tag = tokens[0]["tag"]
         next_node, tokens = parse_arithmetic_factor(tokens[1:])
         node = {"tag": tag, "left": node, "right": next_node}
@@ -512,7 +512,7 @@ def parse_arithmetic_term(tokens):
 
 def test_parse_arithmetic_term():
     """
-    arithmetic_term = arithmetic_factor { ("*" | "/") arithmetic_factor } ;
+    arithmetic_term = arithmetic_factor { ("*" | "/" | "%") arithmetic_factor } ;
     """
     print("testing parse_arithmetic_term...")
     ast, tokens = parse_arithmetic_term(tokenize("x"))
@@ -538,6 +538,69 @@ def test_parse_arithmetic_term():
         "left": {
             "tag": "*",
             "left": {"tag": "identifier", "value": "x"},
+            "right": {"tag": "identifier", "value": "y"},
+        },
+        "right": {"tag": "identifier", "value": "z"},
+    }
+
+    ast, tokens = parse_arithmetic_term(tokenize("x%y"))
+    assert ast == {
+        "tag": "%",
+        "left": {"tag": "identifier", "value": "x"},
+        "right": {"tag": "identifier", "value": "y"},
+    }
+
+    ast, tokens = parse_arithmetic_term(tokenize("x%y%z"))
+    assert ast == {
+        "tag": "%",
+        "left": {
+            "tag": "%",
+            "left": {"tag": "identifier", "value": "x"},
+            "right": {"tag": "identifier", "value": "y"},
+        },
+        "right": {"tag": "identifier", "value": "z"},
+    }
+
+    ast, tokens = parse_arithmetic_term(tokenize("w*x/y%z"))
+    assert ast == {
+        "tag": "%",
+        "left": {
+            "tag": "/",
+            "left": {
+                "tag": "*",
+                "left": {"tag": "identifier", "value": "w"},
+                "right": {"tag": "identifier", "value": "x"},
+            },
+            "right": {"tag": "identifier", "value": "y"},
+        },
+        "right": {"tag": "identifier", "value": "z"},
+    }
+
+    ast, tokens = parse_arithmetic_term(tokenize("w*x%y/z"))
+    assert ast == {
+        "tag": "/",
+        "left": {
+            "tag": "%",
+            "left": {
+                "tag": "*",
+                "left": {"tag": "identifier", "value": "w"},
+                "right": {"tag": "identifier", "value": "x"},
+            },
+            "right": {"tag": "identifier", "value": "y"},
+        },
+        "right": {"tag": "identifier", "value": "z"},
+    }
+
+    ast, tokens = parse_arithmetic_term(tokenize("w%x/y*z"))
+    assert ast == {
+        "tag": "*",
+        "left": {
+            "tag": "/",
+            "left": {
+                "tag": "%",
+                "left": {"tag": "identifier", "value": "w"},
+                "right": {"tag": "identifier", "value": "x"},
+            },
             "right": {"tag": "identifier", "value": "y"},
         },
         "right": {"tag": "identifier", "value": "z"},
@@ -606,6 +669,73 @@ def test_parse_arithmetic_expression():
             "tag": "+",
             "left": {"tag": "identifier", "value": "x"},
             "right": {"tag": "identifier", "value": "y"},
+        },
+        "right": {"tag": "identifier", "value": "z"},
+    }
+
+    ast = parse_arithmetic_expression(tokenize("x%y"))[0]
+    assert ast == {
+        "tag": "%",
+        "left": {"tag": "identifier", "value": "x"},
+        "right": {"tag": "identifier", "value": "y"},
+    }
+    ast = parse_arithmetic_expression(tokenize("w+x-y%z"))[0]
+    assert ast == {
+        "tag": "-",
+        "left": {
+            "tag": "+",
+            "left": {"tag": "identifier", "value": "w"},
+            "right": {"tag": "identifier", "value": "x"},
+        },
+        "right": {
+            "tag": "%",
+            "left": {"tag": "identifier", "value": "y"},
+            "right": {"tag": "identifier", "value": "z"},
+        },
+    }
+    ast = parse_arithmetic_expression(tokenize("w+x%y-z"))[0]
+    assert ast == {
+        "tag": "-",
+        "left": {
+            "tag": "+",
+            "left": {"tag": "identifier", "value": "w"},
+            "right": {
+                "tag": "%",
+                "left": {"tag": "identifier", "value": "x"},
+                "right": {"tag": "identifier", "value": "y"},
+            },
+        },
+        "right": {"tag": "identifier", "value": "z"},
+    }
+    ast = parse_arithmetic_expression(tokenize("(w%x)%(y%z)"))[0]
+    assert ast == {
+        "tag": "%",
+        "left": {
+            "tag": "%",
+            "left": {"tag": "identifier", "value": "w"},
+            "right": {"tag": "identifier", "value": "x"},
+        },
+        "right": {
+            "tag": "%",
+            "left": {"tag": "identifier", "value": "y"},
+            "right": {"tag": "identifier", "value": "z"},
+        },
+    }
+    ast = parse_arithmetic_expression(tokenize("v/(w%x+y)*z"))[0]
+    assert ast == {
+        "tag": "*",
+        "left": {
+            "tag": "/",
+            "left": {"tag": "identifier", "value": "v"},
+            "right": {
+                "tag": "+",
+                "left": {
+                    "tag": "%",
+                    "left": {"tag": "identifier", "value": "w"},
+                    "right": {"tag": "identifier", "value": "x"},
+                },
+                "right": {"tag": "identifier", "value": "y"},
+            },
         },
         "right": {"tag": "identifier", "value": "z"},
     }
