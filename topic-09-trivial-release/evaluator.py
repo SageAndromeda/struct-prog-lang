@@ -1,3 +1,6 @@
+# Sage Hardiman
+
+
 from tokenizer import tokenize
 from parser import parse
 from pprint import pprint
@@ -51,6 +54,17 @@ def evaluate(ast, environment):
         right_value, _ = evaluate(ast["right"], environment)
         assert right_value != 0, "Division by zero"
         return left_value / right_value, False
+
+    if ast["tag"] == "%":
+        left_value, _ = evaluate(ast["left"], environment)
+        right_value, _ = evaluate(ast["right"], environment)
+        assert right_value != 0, "Division by zero"
+        if (left_value >= 0 and right_value >= 0) or (
+            left_value < 0 and right_value < 0
+        ):
+            return left_value % right_value, False
+        return (-1) * (((-1) * left_value) % right_value), False
+
     if ast["tag"] == "negate":
         value, _ = evaluate(ast["value"], environment)
         return -value, False
@@ -276,6 +290,26 @@ def test_evaluate_division():
     print("test evaluate division")
     equals("4/2", {}, 2, {})
     equals("8/4/2", {}, 1, {})
+
+
+def test_evaluate_modulo():
+    print("test evaluate modulo")
+    equals("1%10", {}, 1, {})
+    equals("8%4%2", {}, 0, {})
+    equals("10%5.23", {}, 4.77, {})
+    equals("-1%10", {}, -1, {})
+    equals("1%-10", {}, 1, {})
+    equals("1%-10", {}, 1, {})
+    equals("772%(-43)", {}, 41, {})
+    equals("(-772)%43", {}, -41, {})
+    equals("(-772)%(-43)", {}, -41, {})
+    equals("772%43", {}, 41, {})
+    equals("-10%5.23", {}, -4.77, {})
+    equals("3%2*5", {}, 5, {})
+    equals("3+2%2", {}, 3, {})
+    equals("(3+2)%2", {}, 1, {})
+    equals("(3+2)%(-2)", {}, 1, {})
+    equals("((9-22)+(3+2))%(-2)", {}, 0, {})
 
 
 def test_evaluate_negation():
@@ -529,6 +563,7 @@ if __name__ == "__main__":
     test_evaluate_subtraction()
     test_evaluate_multiplication()
     test_evaluate_division()
+    test_evaluate_modulo()
     test_evaluate_negation()
     test_evaluate_print_statement()
     test_evaluate_if_statement()
